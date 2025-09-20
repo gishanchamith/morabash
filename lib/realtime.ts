@@ -1,15 +1,16 @@
 "use client"
 
 import { createClient } from "@/lib/supabase/client"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 export function useRealtimeMatches() {
   const [matches, setMatches] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
-    // Initial fetch
+    let isMounted = true
+
     const fetchMatches = async () => {
       const { data } = await supabase
         .from("matches")
@@ -21,6 +22,8 @@ export function useRealtimeMatches() {
           scoreboard(*)
         `)
         .order("match_date", { ascending: false })
+
+      if (!isMounted) return
 
       if (data) {
         setMatches(data)
@@ -48,6 +51,7 @@ export function useRealtimeMatches() {
       .subscribe()
 
     return () => {
+      isMounted = false
       supabase.removeChannel(matchesSubscription)
       supabase.removeChannel(scoreboardSubscription)
     }
@@ -59,10 +63,11 @@ export function useRealtimeMatches() {
 export function useRealtimeStandings() {
   const [standings, setStandings] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
-    // Initial fetch
+    let isMounted = true
+
     const fetchStandings = async () => {
       const { data } = await supabase
         .from("tournament_standings")
@@ -72,6 +77,8 @@ export function useRealtimeStandings() {
         `)
         .order("points", { ascending: false })
         .order("nrr", { ascending: false })
+
+      if (!isMounted) return
 
       if (data) {
         setStandings(data)
@@ -91,6 +98,7 @@ export function useRealtimeStandings() {
       .subscribe()
 
     return () => {
+      isMounted = false
       supabase.removeChannel(standingsSubscription)
     }
   }, [supabase])
@@ -101,12 +109,13 @@ export function useRealtimeStandings() {
 export function useRealtimeBalls(matchId: string) {
   const [balls, setBalls] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     if (!matchId) return
 
-    // Initial fetch
+    let isMounted = true
+
     const fetchBalls = async () => {
       const { data } = await supabase
         .from("balls")
@@ -118,6 +127,8 @@ export function useRealtimeBalls(matchId: string) {
         `)
         .eq("match_id", matchId)
         .order("created_at", { ascending: false })
+
+      if (!isMounted) return
 
       if (data) {
         setBalls(data)
@@ -141,6 +152,7 @@ export function useRealtimeBalls(matchId: string) {
       .subscribe()
 
     return () => {
+      isMounted = false
       supabase.removeChannel(ballsSubscription)
     }
   }, [matchId, supabase])

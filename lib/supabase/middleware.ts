@@ -28,16 +28,35 @@ export async function updateSession(req: NextRequest) {
   } = await supabase.auth.getUser();
 
   // Protect admin routes
-  if (req.nextUrl.pathname.startsWith("/admin") && !user) {
-    const loginUrl = new URL("/auth/login", req.url);
-    const redirectRes = NextResponse.redirect(loginUrl);
+  if (req.nextUrl.pathname.startsWith("/admin")) {
+    if (!user) {
+      const loginUrl = new URL("/auth/login", req.url);
+      const redirectRes = NextResponse.redirect(loginUrl);
 
-    // 🔐 Carry over cookies set on `res` to the redirect response
-    for (const cookie of res.cookies.getAll()) {
-      redirectRes.cookies.set(cookie);
+      for (const cookie of res.cookies.getAll()) {
+        redirectRes.cookies.set(cookie);
+      }
+
+      return redirectRes;
     }
 
-    return redirectRes;
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (!profile || profile.role !== "admin") {
+      const errorUrl = new URL("/auth/error", req.url);
+      errorUrl.searchParams.set("error", "not-authorized");
+      const redirectRes = NextResponse.redirect(errorUrl);
+
+      for (const cookie of res.cookies.getAll()) {
+        redirectRes.cookies.set(cookie);
+      }
+
+      return redirectRes;
+    }
   }
 
   // IMPORTANT: return the SAME response we passed into createServerClient

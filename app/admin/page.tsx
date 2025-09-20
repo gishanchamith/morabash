@@ -1,5 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
-import { redirect } from "next/navigation"
+import { getAdminSupabase } from "@/lib/supabase/admin"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -7,17 +6,7 @@ import Link from "next/link"
 import { Settings, Users, Trophy, Target, Calendar, TrendingUp, Plus, Edit } from "lucide-react"
 
 export default async function AdminDashboard() {
-  const supabase = await createClient()
-
-  // Check if user is authenticated
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser()
-
-  if (error || !user) {
-    redirect("/auth/login")
-  }
+  const { supabase, user } = await getAdminSupabase()
 
   // Fetch dashboard statistics
   const [

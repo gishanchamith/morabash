@@ -73,7 +73,7 @@ export function useRealtimeStandings() {
         .from("tournament_standings")
         .select(`
           *,
-          team:teams(name, captain_name)
+          team:teams(name, captain)
         `)
         .order("points", { ascending: false })
         .order("nrr", { ascending: false })

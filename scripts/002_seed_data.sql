@@ -1,7 +1,7 @@
 -- Seed data for Cricket Tournament Management System
 
 -- Insert 11 teams
-INSERT INTO teams (name, captain_name) VALUES
+INSERT INTO teams (name, captain) VALUES
 ('Mumbai Warriors', 'Rohit Sharma'),
 ('Delhi Capitals', 'Rishabh Pant'),
 ('Chennai Super Kings', 'MS Dhoni'),

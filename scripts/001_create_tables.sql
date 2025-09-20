@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS teams (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(100) NOT NULL UNIQUE,
   logo_url TEXT,
-  captain_name VARCHAR(100),
+  captain VARCHAR(100),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

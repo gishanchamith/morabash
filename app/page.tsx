@@ -48,7 +48,7 @@ export default async function HomePage() {
         <div className="max-w-7xl mx-auto text-center">
           <div className="glass rounded-3xl p-12 mb-8">
             <h1 className="text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              Cricket Tournament 2025
+              MORA BASH 2025
             </h1>
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
               Experience the thrill of live cricket with real-time scores, detailed statistics, and comprehensive

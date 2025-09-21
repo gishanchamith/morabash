@@ -33,6 +33,66 @@ export default async function LiveScoresPage() {
     .order("match_date", { ascending: false })
     .limit(6)
 
+  let completedScoreboards: Record<string, any[]> = {}
+  if (recentMatches && recentMatches.length > 0) {
+    const { data: scoreRows } = await supabase
+      .from("scoreboard")
+      .select("match_id, team_id, innings, runs, wickets, overs")
+      .in(
+        "match_id",
+        recentMatches.map((match) => match.id),
+      )
+
+    if (scoreRows) {
+      completedScoreboards = scoreRows.reduce<Record<string, any[]>>((acc, row) => {
+        if (!acc[row.match_id]) acc[row.match_id] = []
+        acc[row.match_id].push(row)
+        return acc
+      }, {})
+    }
+  }
+
+  const buildResultSummary = (match: any) => {
+    const rows = completedScoreboards[match.id] ?? []
+    const inningsOne = rows.find((row) => row.innings === 1 && row.team_id === match.team1_id)
+    const inningsTwo = rows.find((row) => row.innings === 2 && row.team_id === match.team2_id)
+
+    if (!inningsOne || !inningsTwo) {
+      return match.winner?.name ? `${match.winner.name} won` : "Result unavailable"
+    }
+
+    const team1Runs = Number(inningsOne.runs ?? 0)
+    const team2Runs = Number(inningsTwo.runs ?? 0)
+    const team2Wickets = Number(inningsTwo.wickets ?? 10)
+
+    const team1Name = match.team1?.name ?? "Team 1"
+    const team2Name = match.team2?.name ?? "Team 2"
+
+    if (match.winner?.name) {
+      if (team1Runs > team2Runs) {
+        const margin = team1Runs - team2Runs
+        return `${match.winner.name} won by ${margin} run${margin === 1 ? "" : "s"}`
+      }
+      if (team2Runs > team1Runs) {
+        const wicketsRemaining = Math.max(1, 10 - team2Wickets)
+        return `${match.winner.name} won by ${wicketsRemaining} wicket${wicketsRemaining === 1 ? "" : "s"}`
+      }
+      return `${match.winner.name} won`
+    }
+
+    if (team1Runs > team2Runs) {
+      const margin = team1Runs - team2Runs
+      return `${team1Name} won by ${margin} run${margin === 1 ? "" : "s"}`
+    }
+
+    if (team2Runs > team1Runs) {
+      const wicketsRemaining = Math.max(1, 10 - team2Wickets)
+      return `${team2Name} won by ${wicketsRemaining} wicket${wicketsRemaining === 1 ? "" : "s"}`
+    }
+
+    return "Match tied"
+  }
+
   // Fetch upcoming matches
   const { data: upcomingMatches } = await supabase
     .from("matches")
@@ -164,20 +224,18 @@ export default async function LiveScoresPage() {
                         <span className="text-sm text-muted-foreground">vs</span>
                         <span className="font-semibold">{match.team2?.name}</span>
                       </div>
-                      <div className="text-center">
-                        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-2">
-                          <MapPin className="h-4 w-4" />
-                          {match.venue}
-                        </div>
-                        {match.winner && (
-                          <div className="p-2 glass rounded-lg">
-                            <p className="text-sm font-medium text-primary">
-                              <Trophy className="inline h-4 w-4 mr-1" />
-                              Winner: {match.winner.name}
-                            </p>
-                          </div>
-                        )}
+                    <div className="space-y-2 text-center">
+                      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                        <MapPin className="h-4 w-4" />
+                        {match.venue}
                       </div>
+                      <div className="p-2 glass rounded-lg">
+                        <p className="text-sm font-medium text-primary">
+                          <Trophy className="inline h-4 w-4 mr-1" />
+                          {buildResultSummary(match)}
+                        </p>
+                      </div>
+                    </div>
                       <Button size="sm" variant="outline" className="w-full glass bg-transparent" asChild>
                         <Link href={`/match/${match.id}/scorecard`}>View Scorecard</Link>
                       </Button>

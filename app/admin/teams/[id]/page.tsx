@@ -12,12 +12,31 @@ export default async function EditTeamPage({ params }: PageProps) {
   const { supabase } = await getAdminSupabase()
   const { data: team } = await supabase
     .from("teams")
-    .select("id, name, captain")
+    .select(
+      `
+      id,
+      name,
+      captain,
+      players:players(id, name)
+    `,
+    )
     .eq("id", id)
     .maybeSingle()
 
   if (!team) {
     notFound()
+  }
+
+  const enrichedTeam = {
+    id: team.id,
+    name: team.name,
+    captain: team.captain,
+    players: Array.isArray((team as any).players)
+      ? (team as any).players.map((player: any) => ({
+          id: player.id as string,
+          name: player.name as string | null,
+        }))
+      : [],
   }
 
   return (
@@ -31,7 +50,7 @@ export default async function EditTeamPage({ params }: PageProps) {
             Modify the team name or captain and save your changes.
           </p>
         </div>
-        <TeamForm mode="edit" team={team} />
+        <TeamForm mode="edit" team={enrichedTeam} />
       </div>
     </div>
   )

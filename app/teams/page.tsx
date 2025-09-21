@@ -41,14 +41,16 @@ export default async function TeamsPage() {
             <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {teams?.length ? (
                 teams.map((team: Team) => (
-                  <Card key={team.id} className="glass glass-hover">
-                    <CardHeader className="space-y-2">
-                      <CardTitle className="text-xl font-semibold">{team.name || "Unnamed Team"}</CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        Captain: {team.captain?.trim() || "Not provided"}
-                      </p>
-                    </CardHeader>
-                  </Card>
+                  <Link key={team.id} href={`/teams/${team.id}`}>
+                    <Card className="glass glass-hover transition-transform hover:-translate-y-1">
+                      <CardHeader className="space-y-2">
+                        <CardTitle className="text-xl font-semibold">{team.name || "Unnamed Team"}</CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                          Captain: {team.captain?.trim() || "Not provided"}
+                        </p>
+                      </CardHeader>
+                    </Card>
+                  </Link>
                 ))
               ) : (
                 <Card className="glass">

@@ -23,8 +23,11 @@ export default function MatchDetailsPage() {
       [...balls].sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()),
     [balls],
   )
+  const rawOversValue = Number(match?.overs_per_innings ?? 20)
+  const oversPerInnings = Number.isFinite(rawOversValue) && rawOversValue > 0 ? rawOversValue : 20
+  const ballsPerInnings = oversPerInnings * 6
 
-  const aggregatedScoreboard = aggregateScoreboard(balls)
+  const aggregatedScoreboard = aggregateScoreboard(balls, { ballsPerInnings })
 
   const fallbackTeam1 = useMemo(() => {
     const teamId = match?.team1_id
@@ -132,6 +135,9 @@ export default function MatchDetailsPage() {
               {match.team1?.name} vs {match.team2?.name}
             </h1>
             <p className="text-muted-foreground">{match.venue}</p>
+            <p className="text-sm text-muted-foreground">
+              Limited to {oversPerInnings} overs per innings ({ballsPerInnings} balls).
+            </p>
           </div>
           <Badge
             className={

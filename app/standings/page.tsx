@@ -4,19 +4,12 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { Trophy, TrendingUp, Target, Medal } from "lucide-react"
+import { computeStandings } from "@/lib/standings"
 
 export default async function StandingsPage() {
   const supabase = await createClient()
 
-  // Fetch tournament standings with team details
-  const { data: standings } = await supabase
-    .from("tournament_standings")
-    .select(`
-      *,
-      team:teams(name, captain)
-    `)
-    .order("points", { ascending: false })
-    .order("nrr", { ascending: false })
+  const standings = await computeStandings(supabase)
 
   return (
     <div className="min-h-screen py-8 px-6">
@@ -53,7 +46,7 @@ export default async function StandingsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {standings?.map((standing, index) => (
+                  {standings.map((standing, index) => (
                     <tr
                       key={standing.team_id}
                       className="border-b border-border/30 hover:bg-accent/20 transition-colors"
@@ -66,14 +59,7 @@ export default async function StandingsPage() {
                           {index === 2 && <Medal className="h-5 w-5 text-muted-foreground" />}
                         </div>
                       </td>
-                      <td className="py-4 px-2">
-                        <div>
-                          <div className="font-semibold text-lg">{standing.team?.name}</div>
-                          {standing.team?.captain && (
-                            <div className="text-sm text-muted-foreground">{standing.team.captain}</div>
-                          )}
-                        </div>
-                      </td>
+                      <td className="py-4 px-2 font-semibold text-lg">{standing.team_name}</td>
                       <td className="text-center py-4 px-2 font-semibold">{standing.matches_played}</td>
                       <td className="text-center py-4 px-2 font-semibold text-primary">{standing.wins}</td>
                       <td className="text-center py-4 px-2 font-semibold text-destructive">{standing.losses}</td>
@@ -103,7 +89,7 @@ export default async function StandingsPage() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Most Wins */}
-            {standings && standings.length > 0 && (
+            {standings.length > 0 && (
               <Card className="glass glass-hover">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
@@ -113,7 +99,7 @@ export default async function StandingsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-center">
-                    <h3 className="text-xl font-bold mb-2">{standings[0]?.team?.name}</h3>
+                    <h3 className="text-xl font-bold mb-2">{standings[0]?.team_name}</h3>
                     <div className="text-3xl font-bold text-primary mb-2">{standings[0]?.wins}</div>
                     <p className="text-sm text-muted-foreground">out of {standings[0]?.matches_played} matches</p>
                   </div>
@@ -122,7 +108,7 @@ export default async function StandingsPage() {
             )}
 
             {/* Best NRR */}
-            {standings && standings.length > 0 && (
+            {standings.length > 0 && (
               <Card className="glass glass-hover">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
@@ -132,10 +118,10 @@ export default async function StandingsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-center">
-                    <h3 className="text-xl font-bold mb-2">{standings.sort((a, b) => b.nrr - a.nrr)[0]?.team?.name}</h3>
+                    <h3 className="text-xl font-bold mb-2">{[...standings].sort((a, b) => b.nrr - a.nrr)[0]?.team_name}</h3>
                     <div className="text-3xl font-bold text-secondary mb-2">
-                      {standings.sort((a, b) => b.nrr - a.nrr)[0]?.nrr >= 0 ? "+" : ""}
-                      {standings.sort((a, b) => b.nrr - a.nrr)[0]?.nrr.toFixed(3)}
+                      {[...standings].sort((a, b) => b.nrr - a.nrr)[0]?.nrr >= 0 ? "+" : ""}
+                      {[...standings].sort((a, b) => b.nrr - a.nrr)[0]?.nrr.toFixed(3)}
                     </div>
                     <p className="text-sm text-muted-foreground">Net Run Rate</p>
                   </div>
@@ -144,7 +130,7 @@ export default async function StandingsPage() {
             )}
 
             {/* Most Active */}
-            {standings && standings.length > 0 && (
+            {standings.length > 0 && (
               <Card className="glass glass-hover">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
@@ -155,10 +141,10 @@ export default async function StandingsPage() {
                 <CardContent>
                   <div className="text-center">
                     <h3 className="text-xl font-bold mb-2">
-                      {standings.sort((a, b) => b.matches_played - a.matches_played)[0]?.team?.name}
+                      {[...standings].sort((a, b) => b.matches_played - a.matches_played)[0]?.team_name}
                     </h3>
                     <div className="text-3xl font-bold text-primary mb-2">
-                      {standings.sort((a, b) => b.matches_played - a.matches_played)[0]?.matches_played}
+                      {[...standings].sort((a, b) => b.matches_played - a.matches_played)[0]?.matches_played}
                     </div>
                     <p className="text-sm text-muted-foreground">Matches Played</p>
                   </div>

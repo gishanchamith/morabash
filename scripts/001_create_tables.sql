@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS matches (
   winner_id UUID REFERENCES teams(id),
   toss_winner_id UUID REFERENCES teams(id),
   elected_to VARCHAR(10) CHECK (elected_to IN ('bat', 'bowl')),
+  overs_per_innings INTEGER DEFAULT 20 CHECK (overs_per_innings BETWEEN 1 AND 90),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

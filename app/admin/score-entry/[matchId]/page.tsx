@@ -15,7 +15,9 @@ export default async function MatchScoreEntryPage({ params }: { params: { matchI
       team2_id,
       venue,
       status,
+      winner_id,
       match_date,
+      overs_per_innings,
       team1:teams!matches_team1_id_fkey(id, name),
       team2:teams!matches_team2_id_fkey(id, name)
     `)
@@ -62,7 +64,9 @@ export default async function MatchScoreEntryPage({ params }: { params: { matchI
     id: match.id,
     venue: match.venue,
     status: match.status,
+    winner_id: match.winner_id,
     match_date: match.match_date,
+    overs_per_innings: match.overs_per_innings,
     team1: {
       id: match.team1_id,
       name: getTeamName(match.team1, "Team 1"),

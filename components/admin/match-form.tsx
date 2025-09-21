@@ -37,6 +37,7 @@ type MatchFormValues = {
   status: MatchStatus
   toss_winner_id: string | null
   elected_to: MatchDecision | null
+  overs_per_innings: number | null
 }
 
 type MatchFormProps = {
@@ -71,6 +72,9 @@ export function MatchForm({ mode, teams, match }: MatchFormProps) {
   const [electedTo, setElectedTo] = useState<MatchDecision | typeof UNSELECTED_VALUE>(
     match?.elected_to ?? UNSELECTED_VALUE
   )
+  const [oversPerInnings, setOversPerInnings] = useState<string>(
+    match?.overs_per_innings ? String(match.overs_per_innings) : "20"
+  )
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -104,6 +108,17 @@ export function MatchForm({ mode, teams, match }: MatchFormProps) {
       return
     }
 
+    const parsedOvers = Number(oversPerInnings)
+    if (!Number.isFinite(parsedOvers) || parsedOvers <= 0) {
+      setError("Overs per innings must be a positive number")
+      return
+    }
+
+    if (parsedOvers > 90) {
+      setError("Overs per innings cannot exceed 90")
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
@@ -113,6 +128,7 @@ export function MatchForm({ mode, teams, match }: MatchFormProps) {
         venue: venue.trim(),
         match_date: new Date(matchDate).toISOString(),
         status,
+        overs_per_innings: Math.round(parsedOvers),
       }
 
       const normalizedTossWinner = tossWinnerId === UNSELECTED_VALUE ? null : tossWinnerId
@@ -218,6 +234,23 @@ export function MatchForm({ mode, teams, match }: MatchFormProps) {
                 required
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Overs per Innings</Label>
+            <Input
+              type="number"
+              min={1}
+              max={90}
+              value={oversPerInnings}
+              onChange={(event) => setOversPerInnings(event.target.value)}
+              placeholder="e.g. 20"
+              className="glass bg-input/50 border-border/50 focus:border-primary/50 focus:ring-primary/20"
+              required
+            />
+            <p className="text-xs text-muted-foreground">
+              Configure match length. Limited overs formats typically use 20 or 50 overs per innings.
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

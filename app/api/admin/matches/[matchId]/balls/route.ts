@@ -66,7 +66,7 @@ export async function POST(request: Request, context: RouteContext) {
 
   const { data: match, error: matchError } = await supabase
     .from("matches")
-    .select("team1_id, team2_id")
+    .select("team1_id, team2_id, overs_per_innings")
     .eq("id", matchId)
     .maybeSingle()
 
@@ -80,6 +80,9 @@ export async function POST(request: Request, context: RouteContext) {
 
   const expectedBattingTeam = payload.innings === 1 ? match.team1_id : match.team2_id
   const expectedBowlingTeam = payload.innings === 1 ? match.team2_id : match.team1_id
+  const rawOversValue = Number(match.overs_per_innings ?? 20)
+  const oversPerInnings = Number.isFinite(rawOversValue) && rawOversValue > 0 ? rawOversValue : 20
+  const ballsPerInnings = oversPerInnings * 6
 
   const { data: batsman } = await supabase
     .from("players")
@@ -138,19 +141,30 @@ export async function POST(request: Request, context: RouteContext) {
   let overNumber = 1
   let ballNumber = 1
 
+  const lastBallWasLegal =
+    !!lastBall && (!lastBall.extra_type || !["wide", "no-ball"].includes(lastBall.extra_type))
+  const currentBallIsLegal = !payload.extra_type || !["wide", "no-ball"].includes(payload.extra_type)
+
   if (lastBall) {
     overNumber = lastBall.over_number
     ballNumber = lastBall.ball_number
 
-    const lastWasLegal = !lastBall.extra_type || !["wide", "no-ball"].includes(lastBall.extra_type)
-
-    if (lastWasLegal) {
+    if (lastBallWasLegal) {
       if (ballNumber >= 6) {
         overNumber += 1
         ballNumber = 1
       } else {
         ballNumber += 1
       }
+    }
+  }
+
+  if (lastBall && !lastBallWasLegal && currentBallIsLegal) {
+    if (ballNumber >= 6) {
+      overNumber += 1
+      ballNumber = 1
+    } else {
+      ballNumber += 1
     }
   }
 
@@ -258,7 +272,7 @@ export async function POST(request: Request, context: RouteContext) {
     if (inningsOne.runs > 0) {
       const target = inningsOne.runs + 1
       const runsNeeded = Math.max(0, target - inningsTwo.runs)
-      const ballsRemaining = Math.max(0, 120 - inningsTwo.legalBalls)
+      const ballsRemaining = Math.max(0, ballsPerInnings - inningsTwo.legalBalls)
       if (runsNeeded <= 0) {
         requiredRR = 0
       } else if (ballsRemaining > 0) {

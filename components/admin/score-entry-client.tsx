@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { format } from "date-fns"
-import { AlertTriangle, ArrowLeft, Shield, Target, Trophy, Users } from "lucide-react"
+import { AlertTriangle, ArrowLeft, Edit, Shield, Target, Trash2, Trophy, Users } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge"
 import { toast } from "@/components/ui/use-toast"
 import { useRealtimeBalls, useRealtimeScoreboard } from "@/lib/realtime"
 import { aggregateScoreboard, normaliseScoreboardRow } from "@/lib/score-utils"
+import { ScoreEntryActions } from "@/components/admin/score-entry-actions"
 
 const EXTRA_TYPES = [
   { value: "wide", label: "Wide" },
@@ -62,7 +63,9 @@ type ScoreEntryClientProps = {
     id: string
     venue: string | null
     status: string
+    winner_id?: string | null
     match_date: string | null
+    overs_per_innings: number | null
     team1: MatchTeam
     team2: MatchTeam
   }
@@ -89,17 +92,27 @@ export function ScoreEntryClient({ match, players, initialScoreboard }: ScoreEnt
   const [wicketPlayerId, setWicketPlayerId] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const [editingBall, setEditingBall] = useState<any | null>(null)
+  const [deletingBallId, setDeletingBallId] = useState<string | null>(null)
 
   const { balls } = useRealtimeBalls(match.id)
   const { scoreboard: liveScoreboard, loading: scoreboardLoading } = useRealtimeScoreboard(match.id)
 
+  const rawOversValue = Number(match.overs_per_innings ?? 20)
+  const oversPerInnings = Number.isFinite(rawOversValue) && rawOversValue > 0 ? rawOversValue : 20
+  const ballsPerInnings = oversPerInnings * 6
+
   useEffect(() => {
+    if (editingBall) {
+      return
+    }
+
     setBowlerId("")
     setExtras("0")
     setExtraType(NO_SELECTION)
     setWicketType(NO_SELECTION)
     setWicketPlayerId("")
-  }, [innings])
+  }, [innings, editingBall])
 
   const scoreboardRows = (!scoreboardLoading && liveScoreboard.length > 0 ? liveScoreboard : initialScoreboard) ?? []
 
@@ -129,20 +142,26 @@ export function ScoreEntryClient({ match, players, initialScoreboard }: ScoreEnt
     return previous?.batsman_id ?? null
   }, [inningsBalls, strikerFromBalls])
 
-  const aggregatedScoreboard = useMemo(() => aggregateScoreboard(balls), [balls])
+  const aggregatedScoreboard = useMemo(
+    () => aggregateScoreboard(balls, { ballsPerInnings }),
+    [balls, ballsPerInnings],
+  )
 
   const isFreeHitDelivery = lastBall?.extra_type === "no-ball"
+  const currentBallIsFreeHit = editingBall ? !!editingBall.is_free_hit : isFreeHitDelivery
 
   const currentOverNumber = lastBall?.over_number ?? 1
 
   const currentOverSlots = useMemo(() => {
-    const slots = Array.from({ length: 6 }, () => null as any)
+    const slots = Array.from({ length: 6 }, () => [] as any[])
 
     inningsBalls
       .filter((ball) => ball.over_number === currentOverNumber)
       .forEach((ball) => {
-        if (ball.ball_number >= 1 && ball.ball_number <= 6) {
-          slots[ball.ball_number - 1] = ball
+        const rawIndex = Number(ball.ball_number)
+        const index = Number.isFinite(rawIndex) && rawIndex > 0 ? rawIndex - 1 : 0
+        if (index >= 0 && index < slots.length) {
+          slots[index] = [...slots[index], ball]
         }
       })
 
@@ -231,6 +250,88 @@ export function ScoreEntryClient({ match, players, initialScoreboard }: ScoreEnt
     }
   }, [strikerId, nonStrikerId, battingOptions])
 
+  const resetForm = () => {
+    setEditingBall(null)
+    setFormError(null)
+    setStrikerId("")
+    setNonStrikerId("")
+    setBowlerId("")
+    setRuns("0")
+    setExtras("0")
+    setExtraType(NO_SELECTION)
+    setWicketType(NO_SELECTION)
+    setWicketPlayerId("")
+  }
+
+  const beginEditing = (
+    ball: any | null,
+    presetOver?: { over_number: number; ball_number: number },
+  ) => {
+    if (deletingBallId) return
+
+    if (!ball) {
+      setEditingBall({
+        id: null,
+        innings,
+        over_number: presetOver?.over_number ?? currentOverNumber,
+        ball_number: presetOver?.ball_number ?? 1,
+        is_free_hit: false,
+      })
+      setFormError(null)
+      setRuns("0")
+      setExtras("0")
+      setExtraType(NO_SELECTION)
+      setWicketType(NO_SELECTION)
+      setWicketPlayerId("")
+      setBowlerId(bowlerId)
+      setStrikerId(strikerId)
+      return
+    }
+
+    setEditingBall(ball)
+    setFormError(null)
+    setInnings(ball.innings === 2 ? 2 : 1)
+    setStrikerId(ball.batsman_id ?? "")
+    setBowlerId(ball.bowler_id ?? "")
+    setRuns(String(ball.runs ?? 0))
+    setExtras(String(ball.extras ?? 0))
+    setExtraType(ball.extra_type ?? NO_SELECTION)
+    setWicketType(ball.wicket_type ?? NO_SELECTION)
+    setWicketPlayerId(ball.wicket_player_id ?? "")
+  }
+
+  const handleDelete = async (ball: any) => {
+    if (deletingBallId) return
+    const confirmed = typeof window !== "undefined" ? window.confirm("Delete this delivery?") : true
+    if (!confirmed) return
+
+    setDeletingBallId(ball.id)
+    setFormError(null)
+
+    try {
+      const response = await fetch(`/api/admin/matches/${match.id}/balls/${ball.id}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => null)
+        throw new Error(body?.error || "Unable to delete delivery")
+      }
+
+      toast({ title: "Delivery removed", description: "The scoreboard has been refreshed." })
+
+      if (editingBall?.id === ball.id) {
+        resetForm()
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to delete delivery"
+      setFormError(message)
+      toast({ title: "Delete failed", description: message })
+    } finally {
+      setDeletingBallId(null)
+    }
+  }
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setFormError(null)
@@ -275,9 +376,16 @@ export function ScoreEntryClient({ match, players, initialScoreboard }: ScoreEnt
 
     setIsSubmitting(true)
 
+    const isEditingExisting = Boolean(editingBall && editingBall.id)
+
     try {
-      const response = await fetch(`/api/admin/matches/${match.id}/balls`, {
-        method: "POST",
+      const endpoint = isEditingExisting
+        ? `/api/admin/matches/${match.id}/balls/${editingBall.id}`
+        : `/api/admin/matches/${match.id}/balls`
+      const method = isEditingExisting ? "PUT" : "POST"
+
+      const response = await fetch(endpoint, {
+        method,
         headers: {
           "Content-Type": "application/json",
         },
@@ -290,7 +398,7 @@ export function ScoreEntryClient({ match, players, initialScoreboard }: ScoreEnt
           extra_type: extraType === NO_SELECTION ? null : extraType,
           wicket_type: wicketType === NO_SELECTION ? null : wicketType,
           wicket_player_id: wicketType === NO_SELECTION ? null : wicketPlayerId || null,
-          is_free_hit: isFreeHitDelivery,
+          is_free_hit: isEditingExisting ? !!editingBall?.is_free_hit : isFreeHitDelivery,
         }),
       })
 
@@ -299,16 +407,25 @@ export function ScoreEntryClient({ match, players, initialScoreboard }: ScoreEnt
         throw new Error(errorBody?.error || "Unable to record ball")
       }
 
-      toast({ title: "Ball recorded", description: "Scoreboard updated successfully." })
+      toast({
+        title: isEditingExisting ? "Delivery updated" : "Ball recorded",
+        description: isEditingExisting
+          ? "Saved changes to the selected delivery."
+          : "Scoreboard updated successfully.",
+      })
 
-      setRuns("0")
-      setExtras("0")
-      setExtraType(NO_SELECTION)
-      setWicketType(NO_SELECTION)
-      setWicketPlayerId("")
+      if (isEditingExisting || (editingBall && editingBall.id === null)) {
+        resetForm()
+      } else {
+        setRuns("0")
+        setExtras("0")
+        setExtraType(NO_SELECTION)
+        setWicketType(NO_SELECTION)
+        setWicketPlayerId("")
 
-      if (wicketType !== NO_SELECTION) {
-        setStrikerId("")
+        if (wicketType !== NO_SELECTION) {
+          setStrikerId("")
+        }
       }
     } catch (error) {
       if (error instanceof Error) {
@@ -390,7 +507,7 @@ export function ScoreEntryClient({ match, players, initialScoreboard }: ScoreEnt
           </p>
           {matchDate && <p className="text-sm text-muted-foreground">{matchDate}</p>}
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-3 items-center">
           <Button variant="outline" className="glass bg-transparent" asChild>
             <Link href="/admin/score-entry">
               <ArrowLeft className="mr-2 h-4 w-4" /> Back to matches
@@ -402,12 +519,22 @@ export function ScoreEntryClient({ match, players, initialScoreboard }: ScoreEnt
         </div>
       </div>
 
+      <ScoreEntryActions
+        matchId={match.id}
+        status={match.status}
+        teams={[match.team1, match.team2]}
+        currentWinnerId={match.winner_id ?? null}
+      />
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="glass glass-hover border-primary/40 lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Trophy className="h-5 w-5 text-primary" /> Scoreboard
             </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Limited to {oversPerInnings} overs per innings ({ballsPerInnings} legal deliveries).
+            </p>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -451,18 +578,97 @@ export function ScoreEntryClient({ match, players, initialScoreboard }: ScoreEnt
                 <Target className="h-4 w-4 text-secondary" /> Current Over (Innings {innings})
               </h3>
               <div className="grid grid-cols-6 gap-2">
-                {currentOverSlots.map((slot, index) => (
-                  <div
-                    key={index}
-                    className={`glass rounded-md text-center py-2 text-sm font-semibold ${
-                      slot ? "border border-primary/30" : "border border-dashed border-border/40 text-muted-foreground"
-                    }`}
-                  >
-                    <div>{formatOverSlot(slot)}</div>
-                    <div className="text-xs text-muted-foreground">{currentOverNumber}.{index + 1}</div>
-                    {slot?.is_free_hit && <div className="text-[10px] text-secondary mt-1">Free Hit</div>}
-                  </div>
-                ))}
+                {currentOverSlots.map((slot, index) => {
+                  const latestDelivery = slot[slot.length - 1]
+                  const isTargetSlot =
+                    editingBall &&
+                    editingBall.id === null &&
+                    editingBall.over_number === currentOverNumber &&
+                    editingBall.ball_number === index + 1
+
+                  return (
+                    <div
+                      key={index}
+                      className={`glass rounded-md text-center py-2 text-sm font-semibold ${
+                        slot.length > 0 || isTargetSlot
+                          ? "border border-primary/30"
+                          : "border border-dashed border-border/40 text-muted-foreground"
+                      }`}
+                    >
+                      {slot.length > 0 ? (
+                        <div className="flex flex-col gap-2 items-stretch">
+                          {slot.map((delivery) => {
+                            const busy =
+                              deletingBallId === delivery.id ||
+                              (editingBall?.id === delivery.id && isSubmitting)
+
+                            return (
+                              <div
+                                key={delivery.id ?? `new-${index}`}
+                                className={`glass rounded-md px-2 py-2 text-sm transition-colors ${
+                                  editingBall?.id === delivery.id
+                                    ? "border border-secondary text-secondary"
+                                    : "border border-transparent"
+                                }`}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => beginEditing(delivery)}
+                                  disabled={busy}
+                                  className="w-full text-center font-semibold"
+                                >
+                                  {formatOverSlot(delivery)}
+                                </button>
+                                <div className="flex justify-center gap-1 mt-1">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => beginEditing(delivery)}
+                                    disabled={busy}
+                                    className="px-2"
+                                  >
+                                    <Edit className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleDelete(delivery)}
+                                    disabled={busy}
+                                    className="px-2 text-destructive border-destructive/40"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                                {delivery.is_free_hit && (
+                                  <div className="text-[10px] text-secondary mt-1">Free Hit</div>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => beginEditing(null, { over_number: currentOverNumber, ball_number: index + 1 })}
+                            disabled={isSubmitting || deletingBallId !== null}
+                            className={isTargetSlot ? "border-secondary text-secondary" : ""}
+                          >
+                            Add Ball
+                          </Button>
+                          <span className="text-xs text-muted-foreground">Empty slot</span>
+                        </div>
+                      )}
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {currentOverNumber}.{index + 1}
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             </div>
 
@@ -479,7 +685,10 @@ export function ScoreEntryClient({ match, players, initialScoreboard }: ScoreEnt
                   </Card>
                 )}
                 {balls.map((ball) => (
-                  <Card key={ball.id} className="glass">
+                  <Card
+                    key={ball.id}
+                    className={`glass ${editingBall?.id === ball.id ? "border border-secondary" : ""}`}
+                  >
                     <CardContent className="p-4 space-y-2">
                       <div className="flex justify-between text-sm text-muted-foreground">
                         <span>
@@ -504,6 +713,27 @@ export function ScoreEntryClient({ match, players, initialScoreboard }: ScoreEnt
                           {ball.wicket_player?.name ? ` - ${ball.wicket_player.name}` : ""}
                         </div>
                       )}
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => beginEditing(ball)}
+                          disabled={deletingBallId === ball.id || (isSubmitting && editingBall?.id === ball.id)}
+                        >
+                          <Edit className="h-3 w-3 mr-1" /> Edit
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(ball)}
+                          disabled={deletingBallId === ball.id}
+                          className="text-destructive border-destructive/40"
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" /> Delete
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 ))}
@@ -515,7 +745,7 @@ export function ScoreEntryClient({ match, players, initialScoreboard }: ScoreEnt
         <Card className="glass">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-primary" /> Record Delivery
+              <Users className="h-5 w-5 text-primary" /> {editingBall ? "Edit Delivery" : "Record Delivery"}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -523,7 +753,9 @@ export function ScoreEntryClient({ match, players, initialScoreboard }: ScoreEnt
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Label className="font-semibold">Current Batsmen</Label>
-                  {isFreeHitDelivery && <Badge className="bg-secondary/10 text-secondary border-secondary/30">Free Hit</Badge>}
+                  {currentBallIsFreeHit && (
+                    <Badge className="bg-secondary/10 text-secondary border-secondary/30">Free Hit</Badge>
+                  )}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -725,9 +957,28 @@ export function ScoreEntryClient({ match, players, initialScoreboard }: ScoreEnt
                 </div>
               )}
 
-              <Button type="submit" className="w-full neon-glow" disabled={isSubmitting}>
-                {isSubmitting ? "Saving..." : "Record Ball"}
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button type="submit" className="sm:flex-1 neon-glow" disabled={isSubmitting}>
+                  {isSubmitting
+                    ? editingBall
+                      ? "Saving..."
+                      : "Recording..."
+                    : editingBall
+                      ? "Save Changes"
+                      : "Record Ball"}
+                </Button>
+                {editingBall && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="sm:flex-1 glass bg-transparent"
+                    onClick={resetForm}
+                    disabled={isSubmitting}
+                  >
+                    Cancel Edit
+                  </Button>
+                )}
+              </div>
             </form>
           </CardContent>
         </Card>

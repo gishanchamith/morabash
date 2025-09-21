@@ -1,5 +1,6 @@
 "use client"
 
+import { useMemo } from "react"
 import { useParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -7,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { ArrowLeft, Target, TrendingUp, Clock } from "lucide-react"
 import { useRealtimeBalls, useRealtimeMatches } from "@/lib/realtime"
+import { aggregateScoreboard, normaliseScoreboardRow } from "@/lib/score-utils"
 
 export default function MatchDetailsPage() {
   const params = useParams()
@@ -15,6 +17,69 @@ export default function MatchDetailsPage() {
   const { balls, loading: ballsLoading } = useRealtimeBalls(matchId)
 
   const match = matches.find((m) => m.id === matchId)
+
+  const sortedBalls = useMemo(
+    () =>
+      [...balls].sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()),
+    [balls],
+  )
+
+  const aggregatedScoreboard = aggregateScoreboard(balls)
+
+  const fallbackTeam1 = useMemo(() => {
+    const teamId = match?.team1_id
+    const row = match?.scoreboard?.find((s: any) => s.team_id === teamId)
+    const normalised = normaliseScoreboardRow(row)
+    return {
+      runs: normalised.runs,
+      wickets: normalised.wickets,
+      overs: normalised.overs,
+      runRate: normalised.runRate,
+    }
+  }, [match])
+
+  const fallbackTeam2 = useMemo(() => {
+    const teamId = match?.team2_id
+    const row = match?.scoreboard?.find((s: any) => s.team_id === teamId)
+    const normalised = normaliseScoreboardRow(row)
+    return {
+      runs: normalised.runs,
+      wickets: normalised.wickets,
+      overs: normalised.overs,
+      runRate: normalised.runRate,
+      requiredRunRate: normalised.requiredRunRate,
+    }
+  }, [match])
+
+  const team1Score = aggregatedScoreboard
+    ? {
+        runs: aggregatedScoreboard.innings1.runs,
+        wickets: aggregatedScoreboard.innings1.wickets,
+        overs: aggregatedScoreboard.innings1.overs,
+        runRate: aggregatedScoreboard.innings1.runRate,
+      }
+    : fallbackTeam1
+
+  const team2Score = aggregatedScoreboard
+    ? {
+        runs: aggregatedScoreboard.innings2.runs,
+        wickets: aggregatedScoreboard.innings2.wickets,
+        overs: aggregatedScoreboard.innings2.overs,
+        runRate: aggregatedScoreboard.innings2.runRate,
+        requiredRunRate: aggregatedScoreboard.innings2.requiredRunRate,
+      }
+    : fallbackTeam2
+
+  const latestBall = sortedBalls[sortedBalls.length - 1]
+  const activeInnings = latestBall?.innings ?? 1
+  const activeInningsBalls = sortedBalls.filter((ball) => ball.innings === activeInnings)
+  const activeStriker = activeInningsBalls[activeInningsBalls.length - 1]
+  const activeNonStriker = activeInningsBalls
+    .slice()
+    .reverse()
+    .find((ball) => ball.batsman_id && ball.batsman_id !== activeStriker?.batsman_id)
+
+  const isUpcomingFreeHit = latestBall?.extra_type === "no-ball"
 
   if (matchesLoading) {
     return (
@@ -50,9 +115,6 @@ export default function MatchDetailsPage() {
       </div>
     )
   }
-
-  const team1Score = match.scoreboard?.find((s: any) => s.team_id === match.team1_id)
-  const team2Score = match.scoreboard?.find((s: any) => s.team_id === match.team2_id)
 
   return (
     <div className="min-h-screen py-8 px-6">
@@ -92,17 +154,17 @@ export default function MatchDetailsPage() {
             <CardContent>
               <div className="text-center">
                 <div className="text-4xl font-bold text-primary mb-2">
-                  {team1Score?.runs || 0}/{team1Score?.wickets || 0}
+                  {team1Score.runs}/{team1Score.wickets}
                 </div>
-                <div className="text-lg text-muted-foreground mb-4">({team1Score?.overs || 0.0} overs)</div>
+                <div className="text-lg text-muted-foreground mb-4">({team1Score.overs} overs)</div>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-muted-foreground">Run Rate:</span>
-                    <div className="font-semibold text-secondary">{team1Score?.current_rr?.toFixed(2) || "0.00"}</div>
+                    <div className="font-semibold text-secondary">{team1Score.runRate.toFixed(2)}</div>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Innings:</span>
-                    <div className="font-semibold">{team1Score?.innings || 1}</div>
+                    <div className="font-semibold">1</div>
                   </div>
                 </div>
               </div>
@@ -117,23 +179,54 @@ export default function MatchDetailsPage() {
             <CardContent>
               <div className="text-center">
                 <div className="text-4xl font-bold text-primary mb-2">
-                  {team2Score?.runs || 0}/{team2Score?.wickets || 0}
+                  {team2Score.runs}/{team2Score.wickets}
                 </div>
-                <div className="text-lg text-muted-foreground mb-4">({team2Score?.overs || 0.0} overs)</div>
+                <div className="text-lg text-muted-foreground mb-4">({team2Score.overs} overs)</div>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-muted-foreground">Run Rate:</span>
-                    <div className="font-semibold text-secondary">{team2Score?.current_rr?.toFixed(2) || "0.00"}</div>
+                    <div className="font-semibold text-secondary">{team2Score.runRate.toFixed(2)}</div>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Required RR:</span>
-                    <div className="font-semibold">{team2Score?.required_rr?.toFixed(2) || "N/A"}</div>
+                    <div className="font-semibold">
+                      {team2Score.requiredRunRate === null ? "N/A" : team2Score.requiredRunRate.toFixed(2)}
+                    </div>
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
+
+        <Card className="glass glass-hover mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-3">
+              <Target className="h-6 w-6 text-primary" />
+              Current Batters (Innings {activeInnings})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 glass rounded-lg border border-primary/30">
+                <p className="text-sm text-muted-foreground uppercase tracking-wide">Striker</p>
+                <p className="text-xl font-semibold">
+                  {activeStriker?.batsman?.name || "TBD"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Facing next delivery{isUpcomingFreeHit ? " • Free Hit" : ""}
+                </p>
+              </div>
+              <div className="p-4 glass rounded-lg border border-secondary/30">
+                <p className="text-sm text-muted-foreground uppercase tracking-wide">Non-striker</p>
+                <p className="text-xl font-semibold">
+                  {activeNonStriker?.batsman?.name || "TBD"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">Ready at non-striker's end</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Ball by Ball Commentary */}
         <Card className="glass mb-8">
@@ -166,6 +259,11 @@ export default function MatchDetailsPage() {
                       </span>
                     </div>
                     <div className="flex items-center gap-3">
+                      {ball.is_free_hit && (
+                        <Badge variant="outline" className="border-secondary text-secondary">
+                          Free Hit
+                        </Badge>
+                      )}
                       {ball.runs > 0 && (
                         <Badge variant="secondary" className="text-primary">
                           {ball.runs} runs

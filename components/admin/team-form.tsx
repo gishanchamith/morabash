@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -21,7 +20,6 @@ type TeamFormProps = {
 
 export function TeamForm({ team, mode }: TeamFormProps) {
   const router = useRouter()
-  const supabase = createClient()
   const [name, setName] = useState(team?.name ?? "")
   const [captain, setCaptain] = useState(team?.captain ?? "")
   const [error, setError] = useState<string | null>(null)
@@ -50,18 +48,38 @@ export function TeamForm({ team, mode }: TeamFormProps) {
         captain: captain.trim() ? captain.trim() : null,
       }
 
-      if (mode === "create") {
-        const { error: insertError } = await supabase.from("teams").insert(payload)
-        if (insertError) throw insertError
-      } else if (team) {
-        const { error: updateError } = await supabase.from("teams").update(payload).eq("id", team.id)
-        if (updateError) throw updateError
+      const endpoint = mode === "create" ? "/api/admin/teams" : `/api/admin/teams/${team?.id}`
+      const method = mode === "create" ? "POST" : "PUT"
+
+      const response = await fetch(endpoint, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        if (result?.code === "23505") {
+          setError("A team with this name already exists. Please choose a different name.")
+          return
+        }
+
+        throw new Error(result?.error || "Unable to save team")
       }
 
       router.push("/admin/teams")
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to save team")
+      if (err instanceof Error) {
+        setError(err.message)
+      } else if (err && typeof err === "object" && "message" in err && typeof err.message === "string") {
+        setError(err.message)
+      } else {
+        setError("Unable to save team")
+      }
     } finally {
       setIsSubmitting(false)
     }

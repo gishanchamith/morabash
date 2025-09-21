@@ -112,7 +112,7 @@ export default async function AdminDashboard() {
             Quick Actions
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="glass glass-hover group cursor-pointer" asChild>
+            <Card className="glass glass-hover group cursor-pointer">
               <Link href="/admin/score-entry">
                 <CardContent className="p-6 text-center">
                   <Edit className="h-12 w-12 text-primary mx-auto mb-4 group-hover:scale-110 transition-transform" />
@@ -121,7 +121,7 @@ export default async function AdminDashboard() {
                 </CardContent>
               </Link>
             </Card>
-            <Card className="glass glass-hover group cursor-pointer" asChild>
+            <Card className="glass glass-hover group cursor-pointer">
               <Link href="/admin/matches">
                 <CardContent className="p-6 text-center">
                   <Calendar className="h-12 w-12 text-secondary mx-auto mb-4 group-hover:scale-110 transition-transform" />
@@ -130,7 +130,7 @@ export default async function AdminDashboard() {
                 </CardContent>
               </Link>
             </Card>
-            <Card className="glass glass-hover group cursor-pointer" asChild>
+            <Card className="glass glass-hover group cursor-pointer">
               <Link href="/admin/teams">
                 <CardContent className="p-6 text-center">
                   <Users className="h-12 w-12 text-primary mx-auto mb-4 group-hover:scale-110 transition-transform" />
@@ -139,7 +139,7 @@ export default async function AdminDashboard() {
                 </CardContent>
               </Link>
             </Card>
-            <Card className="glass glass-hover group cursor-pointer" asChild>
+            <Card className="glass glass-hover group cursor-pointer">
               <Link href="/admin/standings">
                 <CardContent className="p-6 text-center">
                   <TrendingUp className="h-12 w-12 text-secondary mx-auto mb-4 group-hover:scale-110 transition-transform" />

@@ -50,10 +50,19 @@ export function useRealtimeMatches() {
       })
       .subscribe()
 
+    const ballsSubscription = supabase
+      .channel("balls-changes-for-matches")
+      .on("postgres_changes", { event: "*", schema: "public", table: "balls" }, (payload) => {
+        console.log("[v0] Ball update received for matches feed:", payload)
+        fetchMatches()
+      })
+      .subscribe()
+
     return () => {
       isMounted = false
       supabase.removeChannel(matchesSubscription)
       supabase.removeChannel(scoreboardSubscription)
+      supabase.removeChannel(ballsSubscription)
     }
   }, [supabase])
 
@@ -158,4 +167,51 @@ export function useRealtimeBalls(matchId: string) {
   }, [matchId, supabase])
 
   return { balls, loading }
+}
+
+export function useRealtimeScoreboard(matchId: string) {
+  const [scoreboard, setScoreboard] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const supabase = useMemo(() => createClient(), [])
+
+  useEffect(() => {
+    if (!matchId) return
+
+    let isMounted = true
+
+    const fetchScoreboard = async () => {
+      const { data } = await supabase
+        .from("scoreboard")
+        .select("*")
+        .eq("match_id", matchId)
+        .order("innings", { ascending: true })
+
+      if (!isMounted) return
+
+      if (data) {
+        setScoreboard(data)
+      }
+      setLoading(false)
+    }
+
+    fetchScoreboard()
+
+    const scoreboardSubscription = supabase
+      .channel(`scoreboard-${matchId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "scoreboard", filter: `match_id=eq.${matchId}` },
+        () => {
+          fetchScoreboard()
+        },
+      )
+      .subscribe()
+
+    return () => {
+      isMounted = false
+      supabase.removeChannel(scoreboardSubscription)
+    }
+  }, [matchId, supabase])
+
+  return { scoreboard, loading }
 }

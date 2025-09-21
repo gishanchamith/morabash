@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Trash2 } from "lucide-react"
 
@@ -13,7 +12,6 @@ type DeleteTeamButtonProps = {
 
 export function DeleteTeamButton({ teamId, teamName }: DeleteTeamButtonProps) {
   const router = useRouter()
-  const supabase = createClient()
   const [isDeleting, setIsDeleting] = useState(false)
 
   const handleDelete = async () => {
@@ -27,8 +25,14 @@ export function DeleteTeamButton({ teamId, teamName }: DeleteTeamButtonProps) {
     setIsDeleting(true)
 
     try {
-      const { error } = await supabase.from("teams").delete().eq("id", teamId)
-      if (error) throw error
+      const response = await fetch(`/api/admin/teams/${teamId}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => null)
+        throw new Error(result?.error || "Unable to delete team")
+      }
       router.refresh()
     } catch (err) {
       console.error("Failed to delete team", err)

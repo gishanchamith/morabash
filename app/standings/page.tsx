@@ -13,7 +13,7 @@ export default async function StandingsPage() {
     .from("tournament_standings")
     .select(`
       *,
-      team:teams(name, captain_name)
+      team:teams(name, captain)
     `)
     .order("points", { ascending: false })
     .order("nrr", { ascending: false })
@@ -69,8 +69,8 @@ export default async function StandingsPage() {
                       <td className="py-4 px-2">
                         <div>
                           <div className="font-semibold text-lg">{standing.team?.name}</div>
-                          {standing.team?.captain_name && (
-                            <div className="text-sm text-muted-foreground">{standing.team.captain_name}</div>
+                          {standing.team?.captain && (
+                            <div className="text-sm text-muted-foreground">{standing.team.captain}</div>
                           )}
                         </div>
                       </td>

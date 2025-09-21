@@ -1,5 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
-import { redirect } from "next/navigation"
+import { getAdminSupabase } from "@/lib/supabase/admin"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -7,17 +6,7 @@ import Link from "next/link"
 import { Trophy, Target, Clock, Edit } from "lucide-react"
 
 export default async function ScoreEntryPage() {
-  const supabase = await createClient()
-
-  // Check authentication
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser()
-
-  if (error || !user) {
-    redirect("/auth/login")
-  }
+  const { supabase } = await getAdminSupabase()
 
   // Fetch ongoing matches
   const { data: ongoingMatches } = await supabase

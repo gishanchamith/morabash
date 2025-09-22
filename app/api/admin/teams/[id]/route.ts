@@ -3,6 +3,8 @@ import { z } from "zod"
 
 import { getAdminSupabase } from "@/lib/supabase/admin"
 
+export const runtime = "edge"
+
 type RouteContext = {
   params: { id: string }
 }

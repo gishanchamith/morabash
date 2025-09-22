@@ -7,6 +7,8 @@ import { Suspense } from "react"
 import "./globals.css"
 import { Navigation } from "@/components/navigation"
 
+export const runtime = "edge"
+
 export const metadata: Metadata = {
   title: "Cricket Tournament Management System",
   description: "Real-time cricket tournament management with live scores and statistics",

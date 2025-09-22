@@ -4,6 +4,8 @@ import { z } from "zod"
 import { getAdminSupabase } from "@/lib/supabase/admin"
 import { ballsToOversDecimal, oversToBalls } from "@/lib/standings"
 
+export const runtime = "edge"
+
 const payloadSchema = z.object({
   status: z.enum(["upcoming", "ongoing", "completed", "abandoned"]),
   innings_complete: z.boolean().optional(),

@@ -1,6 +1,8 @@
 import type React from "react"
 import { AdminNavigation } from "@/components/admin-navigation"
 
+export const runtime = "edge"
+
 export default function AdminLayout({
   children,
 }: {

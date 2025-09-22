@@ -3,6 +3,8 @@ import { z } from "zod"
 
 import { getAdminSupabase } from "@/lib/supabase/admin"
 
+export const runtime = "edge"
+
 const EXTRA_TYPE_ENUM = z.enum(["wide", "no-ball", "bye", "leg-bye"])
 const WICKET_TYPE_ENUM = z.enum(["bowled", "caught", "lbw", "run-out", "stumped", "hit-wicket"])
 

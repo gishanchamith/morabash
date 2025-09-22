@@ -3,6 +3,8 @@ import { z } from "zod"
 
 import { getAdminSupabase } from "@/lib/supabase/admin"
 
+export const runtime = "edge"
+
 const playerSchema = z.object({
   name: z
     .string({ required_error: "Player name is required" })

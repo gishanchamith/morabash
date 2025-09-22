@@ -3,6 +3,8 @@ import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { fetchScorecardData } from "@/lib/scorecard"
 
+export const runtime = "edge"
+
 type RouteContext = {
   params: {
     matchId: string

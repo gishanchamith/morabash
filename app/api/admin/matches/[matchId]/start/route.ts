@@ -3,6 +3,8 @@ import { z } from "zod"
 
 import { getAdminSupabase } from "@/lib/supabase/admin"
 
+export const runtime = "edge"
+
 const payloadSchema = z.object({
   toss_winner_id: z.string().uuid().optional().nullable(),
   elected_to: z.enum(["bat", "bowl"]).optional().nullable(),

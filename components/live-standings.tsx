@@ -11,12 +11,6 @@ export function LiveStandings() {
   if (loading) {
     return (
       <Card className="glass">
-        <CardHeader>
-          <CardTitle className="text-2xl flex items-center gap-3">
-            <Trophy className="h-8 w-8 text-primary" />
-            Tournament Standings
-          </CardTitle>
-        </CardHeader>
         <CardContent>
           <div className="animate-pulse space-y-4">
             {[...Array(5)].map((_, i) => (
@@ -33,12 +27,6 @@ export function LiveStandings() {
 
   return (
     <Card className="glass">
-      <CardHeader>
-        <CardTitle className="text-2xl flex items-center gap-3">
-          <Trophy className="h-8 w-8 text-primary" />
-          Live Standings
-        </CardTitle>
-      </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
           <table className="w-full">

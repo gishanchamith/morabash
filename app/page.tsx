@@ -30,17 +30,6 @@ export default async function HomePage() {
     .order("match_date", { ascending: false })
     .limit(3)
 
-  // Fetch top teams from standings
-  const { data: topTeams } = await supabase
-    .from("tournament_standings")
-    .select(`
-      *,
-      team:teams(name)
-    `)
-    .order("points", { ascending: false })
-    .order("nrr", { ascending: false })
-    .limit(4)
-
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -73,7 +62,7 @@ export default async function HomePage() {
       </section>
 
       {/* Stats Overview */}
-      <section className="py-16 px-6">
+      {/* <section className="py-16 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
             <Card className="glass glass-hover text-center">
@@ -106,7 +95,7 @@ export default async function HomePage() {
             </Card>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Live Scores Section */}
       <section className="py-16 px-6">
@@ -121,7 +110,11 @@ export default async function HomePage() {
 
       {/* Live Standings */}
       <section className="py-16 px-6">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-7xl mx-auto">
+          <h2 className="text-3xl font-bold mb-8 text-center flex items-center justify-center gap-3">
+            <div className="w-3 h-3 bg-primary rounded-full animate-pulse"></div>
+            Live Standings
+          </h2>
           <LiveStandings />
           <div className="text-center mt-8">
             <Button variant="outline" className="glass glass-hover bg-transparent" asChild>
@@ -150,35 +143,6 @@ export default async function HomePage() {
                       {match.winner && (
                         <p className="text-sm font-medium text-primary mt-2">Winner: {match.winner.name}</p>
                       )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Top Teams */}
-      <section className="py-16 px-6">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl font-bold mb-8 text-center">Tournament Standings</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {topTeams?.map((standing, index) => (
-              <Card key={standing.team_id} className="glass glass-hover">
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Points</span>
-                      <span className="font-semibold">{standing.points}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Matches</span>
-                      <span className="font-semibold">{standing.matches_played}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">NRR</span>
-                      <span className="font-semibold">{standing.nrr.toFixed(3)}</span>
                     </div>
                   </div>
                 </CardContent>

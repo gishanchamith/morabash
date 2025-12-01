@@ -2,9 +2,10 @@
 
 import { createClient } from "@/lib/supabase/client"
 import { useEffect, useMemo, useState } from "react"
+import { Matches } from "./types"
 
 export function useRealtimeMatches() {
-  const [matches, setMatches] = useState<any[]>([])
+  const [matches, setMatches] = useState<Matches>([])
   const [loading, setLoading] = useState(true)
   const supabase = useMemo(() => createClient(), [])
 

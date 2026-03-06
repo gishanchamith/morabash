@@ -1,47 +1,66 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { useState } from "react"
+import { Menu, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Trophy, Users, TrendingUp, Home } from "lucide-react"
-import { cn } from "@/lib/utils"
 
 export function Navigation() {
-  const pathname = usePathname()
+  const [isOpen, setIsOpen] = useState(false)
 
   const navItems = [
-    { href: "/", label: "Home", icon: Home },
-    { href: "/live-scores", label: "Live Scores", icon: Trophy },
-    { href: "/teams", label: "Teams", icon: Users },
-    { href: "/standings", label: "Standings", icon: TrendingUp },
+    { href: "/", label: "Home" },
+    { href: "#about", label: "About" },
+    { href: "#portfolio", label: "Portfolio" },
+    { href: "#experience", label: "Experience" },
+    { href: "#contact", label: "Contact" },
   ]
 
   return (
-    <nav className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50">
-      <div className="glass rounded-full p-2 flex gap-2">
-        {navItems.map((item) => {
-          const Icon = item.icon
-          const isActive = pathname === item.href
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo */}
+          <Link href="/" className="font-serif text-xl font-bold text-primary">
+            UPA
+          </Link>
 
-          return (
-            <Button
-              key={item.href}
-              variant={isActive ? "default" : "ghost"}
-              size="sm"
-              className={cn(
-                "rounded-full transition-all duration-300",
-                isActive && "neon-glow bg-primary text-primary-foreground",
-                !isActive && "hover:bg-accent/20",
-              )}
-              asChild
-            >
-              <Link href={item.href}>
-                <Icon className="h-4 w-4 mr-2" />
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center space-x-8">
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="text-muted-foreground hover:text-foreground transition-colors duration-200 text-sm font-medium"
+              >
                 {item.label}
               </Link>
-            </Button>
-          )
-        })}
+            ))}
+          </div>
+
+          {/* Mobile menu button */}
+          <Button variant="ghost" size="sm" className="md:hidden" onClick={() => setIsOpen(!isOpen)}>
+            {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+        </div>
+
+        {/* Mobile Navigation */}
+        {isOpen && (
+          <div className="md:hidden">
+            <div className="px-2 pt-2 pb-3 space-y-1 bg-background border-t border-border">
+              {navItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="block px-3 py-2 text-muted-foreground hover:text-foreground transition-colors duration-200"
+                  onClick={() => setIsOpen(false)}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </nav>
   )

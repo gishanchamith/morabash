@@ -1,34 +1,43 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { GeistSans } from "geist/font/sans"
-import { GeistMono } from "geist/font/mono"
-import { Analytics } from "@vercel/analytics/next"
-import { Suspense } from "react"
+import { Playfair_Display, Inter } from "next/font/google"
 import "./globals.css"
-import { Navigation } from "@/components/navigation"
 
-export const runtime = "edge"
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  variable: "--font-playfair",
+  display: "swap",
+})
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+})
 
 export const metadata: Metadata = {
-  title: "Cricket Tournament Management System",
-  description: "Real-time cricket tournament management with live scores and statistics",
-  generator: "v0.app",
+  title: "Umasha Parami Abekoon - Fashion Designer & Product Developer",
+  description:
+    "Portfolio of Umasha Parami Abekoon, a passionate fashion design and product development student specializing in sustainable practices and cultural heritage preservation.",
+  keywords: [
+    "fashion design",
+    "product development",
+    "sustainable fashion",
+    "batik art",
+    "textile design",
+    "Sri Lanka",
+  ],
+    generator: 'v0.app'
 }
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode
-}>) {
+}) {
   return (
-    <html lang="en" className="dark">
-      <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable} antialiased`}>
-        <Navigation />
-        <div className="pt-20">
-          <Suspense fallback={<div>Loading...</div>}>{children}</Suspense>
-        </div>
-        <Analytics />
-      </body>
+    <html lang="en" className={`${playfair.variable} ${inter.variable} antialiased`}>
+      <body className="font-sans bg-background text-foreground">{children}</body>
     </html>
   )
 }
